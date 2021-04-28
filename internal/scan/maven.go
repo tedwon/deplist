@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -23,9 +24,14 @@ func GetMvnDeps(path string) (map[string]string, error) {
 	cmd := exec.Command(
 		"mvn",
 		"--no-transfer-progress",
-		"dependency:collect",
+		"dependency:list",
 		"-DincludeScope=runtime")
 	cmd.Dir = dirPath
+
+	// todo work out a better way to do this
+	if _, err := os.Stat("$HOME/.m2/settings.xml"); os.IsNotExist(err) {
+		cmd.Args = append(cmd.Args, "-s", filepath.Join(os.Getenv("HOME"), "/.m2/settings.xml"))
+	}
 
 	// supress error, it always returns errors
 	data, _ := cmd.Output()
