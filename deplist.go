@@ -173,12 +173,17 @@ func GetDeps(fullPath string) ([]Dependency, Bitmask, error) {
 					foundTypes.DepFoundAddFlag(LangJava)
 				}
 
-				for name, version := range pkgs {
+				for _, pkg := range pkgs {
+					name := pkg[0]
+					version := pkg[1]
+					if version != "" {
+						version = version[1:]
+					}
 					deps = append(deps,
 						Dependency{
 							DepType: LangJava,
 							Path:    name,
-							Version: strings.Replace(version, "v", "", 1),
+							Version: version,
 							Files:   []string{},
 						})
 				}

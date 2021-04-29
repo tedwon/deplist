@@ -6,36 +6,37 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"golang.org/x/mod/semver"
 )
 
 type mvnString string
 
 func gatherMvn(mvn string) (string, string, error) {
-	mvnDep := strings.ReplaceAll(string(mvn), "\"", "")
-	mvnDep = strings.TrimSpace(mvnDep)
-	mvnDep = strings.TrimRight(mvnDep, ";")
+	mvnStr := mvn
+	// remove the :compile or :runtime off the end
+	lastColon := strings.LastIndex(mvnStr, ":")
+	if lastColon == -1 {
+		return "", "", fmt.Errorf("Invalid maving parsing, looking for ':'")
+	}
+	mvnStr = mvnStr[:lastColon]
 
-	idx := strings.LastIndex(mvnDep, ":")
+	verIdx := strings.LastIndex(mvnStr, ":")
+	if verIdx == -1 || len(mvnStr) < (verIdx+1) {
+		return "", "", fmt.Errorf("Invalid maving parsing, looking for version ':'")
+	}
+	ver := mvnStr[verIdx+1:]
 
-	if idx == -1 || idx >= len(mvnDep) {
-		return "", "", fmt.Errorf("Invalid maven parsing index, looking for ':'")
+	if mvnStr[0] == '"' {
+		mvnStr = mvnStr[1:]
 	}
 
-	mvnDep = mvnDep[:idx]
-
-	versionidx := strings.LastIndex(mvnDep, ":")
-
-	if versionidx == -1 || versionidx >= len(mvnDep) {
-		return "", "", fmt.Errorf("Invalid maven parsing index, looking for 2nd ':'")
-	}
-
-	return strings.TrimRight(mvnDep[:versionidx], ":jar"), "v" + mvnDep[versionidx+1:], nil
+	mvnStr = strings.Replace(mvnStr, ":"+ver, "", 1)
+	return mvnStr, "v" + ver, nil // add "v" to version for semver compares
 }
 
-func GetMvnDeps(path string) (map[string]string, error) {
-	var gathered map[string]string
+func GetMvnDeps(path string) ([][2]string, error) {
+	var gathered [][2]string // array of [name, ver]string
+
+	seen := make(map[string]struct{})
 
 	dirPath := filepath.Dir(path)
 
@@ -51,8 +52,6 @@ func GetMvnDeps(path string) (map[string]string, error) {
 	data, _ := cmd.Output()
 
 	res := strings.Split(string(data), "\n")
-
-	gathered = make(map[string]string)
 
 	for _, s := range res {
 		// example:
@@ -75,12 +74,14 @@ func GetMvnDeps(path string) (map[string]string, error) {
 
 			// only if no error append
 			if err == nil {
-				// just in case do the semver thing
-				if _, ok := gathered[repo]; ok {
-					gathered[repo] = semver.Max(gathered[repo], version)
-				} else {
-					gathered[repo] = version
+
+				// lookup first if we have an entry
+				if _, ok := seen[repo+version]; ok {
+					continue
 				}
+
+				gathered = append(gathered, [2]string{repo, version})
+				seen[repo+version] = struct{}{}
 			}
 
 		}
