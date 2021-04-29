@@ -40,7 +40,11 @@ func GetMvnDeps(path string) ([][2]string, error) {
 
 	dirPath := filepath.Dir(path)
 
-	cmd := exec.Command("mvn", "--no-transfer-progress", "dependency:tree", "-DoutputType=dot")
+	cmd := exec.Command("mvn",
+		"--no-transfer-progress",
+		"dependency:tree",
+		"-Pall,spring3.2,enable-schemagen,jetty9,ts.all,release,nochecks,sap,jaxws22,deploy,spring-boot-2",
+		"-DoutputType=dot")
 	cmd.Dir = dirPath
 
 	// todo work out a better way to do this
@@ -63,7 +67,11 @@ func GetMvnDeps(path string) ([][2]string, error) {
 		if sepIdx != -1 {
 			// skip import and test
 			// avoid errors downloading deps, not much we can do here
-			if strings.Contains(s, ":test") || strings.Contains(s, ":import") || strings.Contains(s, "ERROR") {
+			// if strings.Contains(s, ":test") || strings.Contains(s, ":import") || strings.Contains(s, "ERROR") {
+			// 	continue
+			// }
+
+			if strings.Contains(s, "ERROR") {
 				continue
 			}
 
