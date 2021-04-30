@@ -107,9 +107,6 @@ func GetMvnDeps(path string) ([][2]string, error) {
 					continue
 				}
 
-				if strings.Contains(s, ":bundle") {
-					fmt.Println("here")
-				}
 				s = strings.Replace(s, ":bundle", "", 1)
 				var part string
 				// record the package name
