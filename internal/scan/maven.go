@@ -42,8 +42,13 @@ func GetMvnDeps(path string) ([][2]string, error) {
 
 	cmd := exec.Command("mvn",
 		"--no-transfer-progress",
+		"-B", // disables colors
 		"dependency:tree",
-		"-Pall,spring3.2,enable-schemagen,jetty9,ts.all,release,nochecks,sap,jaxws22,deploy,spring-boot-2",
+		"-DskipTests",
+		"-Dassembly.tarLongFileMode=posix",
+		"-DfailIfNoTests=false",
+		"-Dtest=false",
+		"-Pdeploy",
 		"-DoutputType=dot")
 	cmd.Dir = dirPath
 
